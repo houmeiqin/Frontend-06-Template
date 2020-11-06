@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>map</title>
+	<style>
+		#root {
+			font-size: 0;
+			width: 1000px;
+		}
+
+		.idot {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			box-sizing: border-box;
+			background-color: gray;
+			border: 1px solid #000;
+			word-spacing: 0;
+		}
+
+		.core {
+			background-color: black;
+		}
+	</style>
+</head>
+
+<body>
+	<button id='save'>保存</button>
+	<div id='root'></div>
+	<script>
+		var root = document.getElementById('root')
+
+		var arr = localStorage.getItem('map') ? localStorage.getItem('map').split(',') : Array(10000).fill(0);
+		function renderMap(arr) {
+			var fragment = document.createDocumentFragment()
+			for (let index = 0; index < arr.length; index++) {
+				var val = arr[index]
+				const dot = document.createElement('div')
+				dot.classList.add('idot')
+				if (val == '1') {
+					dot.classList.add('core')
+				}
+				dot.setAttribute("index", index)
+				fragment.appendChild(dot)
+			}
+			root.appendChild(fragment);
+		}
+		// 按下
+		document.onmousedown = () => {
+			this.move = true
+		}
+		// 移动
+		document.onmousemove = (e) => {
+			// 获取移动位置以及元素
+			if (this.move && e.target.className === 'idot') {
+				// 更新数组，添加样式
+				var index = parseInt(e.target.getAttribute('index'))
+				arr[index] && (arr[index] = 1)
+				e.target.className = e.target.className.concat(" core");
+			}
+		}
+		// 释放
+		document.onmouseup = () => {
+			this.move = false
+		}
+
+		addEvent(document.querySelector('#save'), 'click', function (e) {
+			localStorage.setItem('map', arr.join(','))
+		})
+
+		function addEvent(ele, type, fn) {
+			ele.addEventListener(type, function (e) {
+				fn.call(ele, e)
+			})
+		}
+		function sleep(time) {
+			return new Promise(function (resolve) {
+				setTimeout(resolve, time)
+			})
+		}
+		class Sort {
+			constructor(queue, compare) {
+				this.queue = queue.slice();
+				this.compare = compare ? compare : (a, b) => a - b
+			}
+			take() {
+				if (!this.queue.length) return
+				var min = this.queue[0]
+				var minIndex = 0
+				for (let index = 1; index < this.queue.length; index++) {
+					const element = this.queue[index];
+					if (this.compare(element, min) < 0) {
+						min = this.queue[index]
+						minIndex = index
+
+						this.queue[minIndex] = this.queue[this.queue.length - 1]
+						this.queue.pop()
+					}
+				}
+				root.children[min[0] * 100 + min[1]].style.backgroundColor = 'yellow'
+				return min
+			}
+
+			give(i) {
+				this.queue.push(i)
+			}
+			get length() {
+				return this.queue.length
+			}
+		}
+
+		async function findWay(map, start, end) {
+			const queue = new Sort([start], (a, b) => distance(a) - distance(b))
+
+			function distance(a) {
+				return (a[0] - end[0]) ** 2 + (a[1] - end[1]) ** 2
+			}
+
+			if (map[start[0] * 100 + start[1]] != '0') return alert('死在起点啦')
+			debugger;
+			if (map[end[0] * 100 + end[1]] != '0') return alert('死在终点啦')
+
+			async function insetQueue(x, y) {
+				// 障碍物+边缘 out
+				if (x < 0 || x >= 100 || y < 0 || y >= 100) return
+				if (map[x * 100 + y] != '0') return
+				await sleep(10)
+				root.children[x * 100 + y].style.backgroundColor = 'blue'
+				map[x * 100 + y] = 2
+				console.log('扩散点', x, y);
+				queue.give([x, y])
+			}
+			while (queue.length) {
+				// 取出第一个元素
+				var item = queue.take()
+				var x = item[0]
+				var y = item[1]
+				console.log('元点', x, y);
+				if (x == end[0] && y == end[1]) {
+					root.children[x * 100 + y].style.backgroundColor = 'red'
+					return alert('找到啦', x, y)
+				}
+				// 上
+				await insetQueue(x, y - 1)
+				// 下
+				await insetQueue(x, y + 1)
+				// 左
+				await insetQueue(x - 1, y)
+				// 右
+				await insetQueue(x + 1, y)
+			}
+		}
+		// 100*100
+		renderMap(arr)
+	</script>
+	<script src="./findMap.js"></script>
+</body>
+
+</html>
