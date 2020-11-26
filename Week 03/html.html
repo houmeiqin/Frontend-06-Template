@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+
+<body>
+	<script>
+		// 解析 + - * /
+
+		function excuteCommand(source) {
+			const target = [];
+			const dictionary = ['Number', 'WhiteSpace', 'LineTerminator', '*', '/', '+', '-']
+			const pattern = /(\d+)|([ \t]+)|([\r\n]+)|(\*)|(\/)|(\+)|(\-)/g
+			function* takenize(source) {
+				let result = null
+				let lastIndex = 0;
+				while (true) {
+					lastIndex = pattern.lastIndex;
+					result = pattern.exec(source)
+					if (!result) break
+					if (pattern.lastIndex - lastIndex > result[0].length) break
+					let token = { type: null, value: null }
+					for (let i = 0; i <= dictionary.length; i++) {
+						if (result[i]) {
+							token.type = dictionary[i - 1]
+						}
+					}
+					token.value = result[0]
+					yield token
+				}
+			}
+
+			for (const token of takenize(source)) {
+				if (token.type != 'LineTerminator' && token.type != 'WhiteSpace') {
+					target.push(token)
+				}
+			}
+			target.push({ type: 'EOF' })
+
+			// 解析乘法
+			function MultiplicativeExpression(target) {
+				// Number
+				if (target[0].type == 'Number') {
+					const node = {
+						type: 'MultiplicativeExpression',
+						children: [target[0]] //type value
+					}
+					target[0] = node
+					return MultiplicativeExpression(target)
+				}
+				if (target[0].type == 'MultiplicativeExpression' && target[1] && target[1].type == '*') {
+					const node = {
+						type: 'MultiplicativeExpression',
+						operator: '*',
+						children: []
+					}
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					target.unshift(node)
+					return MultiplicativeExpression(target)
+				}
+				if (target[0].type == 'MultiplicativeExpression' && target[1] && target[1].type == '/') {
+					const node = {
+						type: 'MultiplicativeExpression',
+						operator: '/',
+						children: []
+					}
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					target.unshift(node)
+					return MultiplicativeExpression(target)
+				}
+				if (target[0].type == 'MultiplicativeExpression') {
+					return target[0]
+				}
+			}
+
+			// 解析加法
+			function AdditiveExpression(target) {
+				debugger
+				if (target[0].type == 'MultiplicativeExpression') {
+					const node = {
+						type: 'AdditiveExpression',
+						children: [target[0]]
+					}
+					target[0] = node
+				}
+				if (target[0].type == 'AdditiveExpression' && target[1] && target[1].type == '+') {
+					const node = {
+						type: 'AdditiveExpression',
+						operator: '+',
+						children: []
+					}
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					MultiplicativeExpression(target)
+					node.children.push(target.shift())
+					target.unshift(node)
+					return AdditiveExpression(target)
+				}
+				if (target[0].type == 'AdditiveExpression' && target[1] && target[1].type == '-') {
+					const node = {
+						type: 'AdditiveExpression',
+						operator: '-',
+						children: []
+					}
+					node.children.push(target.shift())
+					node.children.push(target.shift())
+					MultiplicativeExpression(target)
+					node.children.push(target.shift())
+					target.unshift(node)
+					return AdditiveExpression(target)
+				}
+				if (target[0].type == 'AdditiveExpression') {
+					return target[0]
+				}
+				MultiplicativeExpression(target)
+				return AdditiveExpression(target)
+			}
+
+			function Expression(target) {
+				if (target[0].type == 'AdditiveExpression' && target[1] && target[1].type == 'EOF') {
+					const node = {
+						type: 'Expression',
+						children: [target.shift(), target.shift()]
+					}
+					target.unshift(node)
+					return node
+				}
+				AdditiveExpression(target)
+				return Expression(target)
+			}
+			console.log('	Expression(traget)', Expression(target));
+		}
+		excuteCommand(`1+2-3`)
+		// 生成语法树
+	</script>
+</body>
+
+</html>
